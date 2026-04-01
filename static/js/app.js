@@ -2428,6 +2428,7 @@ async function openPair(pair, displayName = null){
 
   let activeTradeMarkers = [];
   let isFirstChartLoad = true;
+  let chartHasFitted = false;
   let userInteracting = false;
 
   // Track user interaction with chart
@@ -2457,7 +2458,16 @@ async function openPair(pair, displayName = null){
         close: c.c,
       }));
 
-      candleSeries.setData(candleData);
+      if (isFirstChartLoad) {
+        candleSeries.setData(candleData);
+        isFirstChartLoad = false;
+      } else {
+        const allButLast = candleData.slice(0, -1);
+        candleSeries.setData(allButLast);
+        if (candleData.length > 0) {
+          candleSeries.update(candleData[candleData.length - 1]);
+        }
+      }
       if (candleData.length > 0) {
         lastCandleData = { ...candleData[candleData.length - 1] };
       }
@@ -2564,10 +2574,10 @@ async function openPair(pair, displayName = null){
         console.error('Failed to load active trades:', e);
       }
 
-      // Auto-fit content only on first load or when user is not interacting
-      if (isFirstChartLoad) {
+      // Auto-fit content only on first load
+      if (!chartHasFitted) {
         chart.timeScale().fitContent();
-        isFirstChartLoad = false;
+        chartHasFitted = true;
       }
 
     } catch (e) {
@@ -2744,6 +2754,7 @@ async function openPair(pair, displayName = null){
       
       // Reset chart state and reload with new timeframe
       isFirstChartLoad = true;
+      chartHasFitted = false;
       loadChartData();
     };
   });
@@ -2946,7 +2957,6 @@ async function placeOrder(pair, side, duration, amount){
     const res=await apiFetch('/api/trade/order',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pair, side, amount_usdt: amt, duration_sec: dur }) });
     const data=await res.json();
     if(!data.ok){ toast(data.error||t('toast.error')); return; }
-    if (typeof window._loadChartData === 'function') window._loadChartData();
     const direction = side === 'buy' ? '⬆️ ' + t('trade.up') : '⬇️ ' + t('trade.down');
     const orderFilledText = t('trade.order_filled');
     toast(`${orderFilledText}: ${direction} ${dur >= 60 ? Math.floor(dur/60) + (' ' + t('trade.min_unit')) : dur + (' ' + t('trade.sec_unit'))}`);
