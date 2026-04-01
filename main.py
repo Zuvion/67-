@@ -2205,7 +2205,10 @@ async def api_support_send(request: Request, db: AsyncSession=Depends(get_db), f
         os.makedirs("static/uploads", exist_ok=True); name=f"{int(time.time())}_{file.filename}"; dest=os.path.join("static/uploads", name)
         with open(dest,"wb") as f: f.write(await file.read())
         file_path="/"+dest
-    msg=SupportMessage(user_id=u.id, sender="user", text=text, file_path=file_path); db.add(msg); await db.commit()
+    msg=SupportMessage(user_id=u.id, sender="user", text=text, file_path=file_path); db.add(msg)
+    admin_chat_msg = AdminChat(user_id=u.id, message_text=text or '[Файл]', is_from_admin=False, read=False)
+    db.add(admin_chat_msg)
+    await db.commit()
     try:
         reply_btn = [[{"text": "📝 Ответить", "callback_data": f"reply:{u.telegram_id}"}]]
         msg_text = f"💬 Сообщение от пользователя\n👤 ID: {u.telegram_id}\n📝 Текст: {text or '[Файл]'}"
@@ -3060,6 +3063,8 @@ async def api_admin_chat_send(user_id: int, payload: AdminChatSendPayload, reque
         return {"success": False, "error": "User not found"}
     chat_msg = AdminChat(user_id=user.id, message_text=payload.message, is_from_admin=True)
     db.add(chat_msg)
+    support_msg = SupportMessage(user_id=user.id, sender="admin", text=payload.message)
+    db.add(support_msg)
     await db.commit()
     try:
         await bot_send_message(int(user.telegram_id), f"💬 <b>Сообщение от поддержки:</b>\n\n{payload.message}")
