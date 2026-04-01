@@ -2209,21 +2209,6 @@ async def api_support_send(request: Request, db: AsyncSession=Depends(get_db), f
     admin_chat_msg = AdminChat(user_id=u.id, message_text=text or '[Файл]', is_from_admin=False, read=False)
     db.add(admin_chat_msg)
     await db.commit()
-    try:
-        reply_btn = [[{"text": "📝 Ответить", "callback_data": f"reply:{u.telegram_id}"}]]
-        msg_text = f"💬 Сообщение от пользователя\n👤 ID: {u.telegram_id}\n📝 Текст: {text or '[Файл]'}"
-        if file_path:
-            url=f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-            async with aiohttp.ClientSession() as s:
-                data=aiohttp.FormData()
-                data.add_field("chat_id", str(ADMIN_ID))
-                data.add_field("caption", msg_text)
-                data.add_field("photo", open(file_path.strip('/'),"rb"))
-                data.add_field("reply_markup", json.dumps({"inline_keyboard": reply_btn}))
-                await s.post(url, data=data)
-        else:
-            await bot_send_message(ADMIN_ID, msg_text, reply_btn)
-    except: pass
     return {"ok": True}
 
 @app.get("/api/admin_messages")
@@ -4109,9 +4094,10 @@ BTC, ETH, TON, SOL, BNB, XRP, DOGE, LTC, TRX, USDT
                     # Find user by telegram_id
                     user = (await db.execute(select(User).where(User.telegram_id == target_user_id))).scalars().first()
                     if user:
-                        # Save admin message to database
                         admin_msg = SupportMessage(user_id=user.id, sender="admin", text=text, file_path=None)
                         db.add(admin_msg)
+                        admin_chat_msg = AdminChat(user_id=user.id, message_text=text, is_from_admin=True)
+                        db.add(admin_chat_msg)
                         await db.commit()
                         
                         # Send notification to user via Telegram with button to open app
