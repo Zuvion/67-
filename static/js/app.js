@@ -3055,6 +3055,8 @@ async function renderReferrals(){
 // -------- Support ----------
 async function openSupport(){
   const cont=document.getElementById('root');
+  const nb = document.querySelector('.navbar');
+  if(nb) nb.style.display = 'none';
   cont.innerHTML = `
   <div class="chat-fullscreen">
     <div class="chat-header">
@@ -3069,7 +3071,7 @@ async function openSupport(){
       <button class="btn-send" id="send">→</button>
     </div>
   </div>`;
-  document.getElementById('backAssets').onclick = renderAssets;
+  document.getElementById('backAssets').onclick = () => { if(nb) nb.style.display = ''; renderAssets(); };
   
   async function deleteMessage(messageId) {
     if (!window.confirm(t('support.confirm_delete'))) {
