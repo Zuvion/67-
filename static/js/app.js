@@ -2026,7 +2026,7 @@ async function openPair(pair, displayName = null){
       <div style="display:flex;align-items:center;gap:10px">
         <img src="${logo}" style="width:32px;height:32px;border-radius:50%" onerror="this.style.display='none'" />
         <div>
-          <div style="font-weight:700;font-size:15px;color:#EAECEF;letter-spacing:0.5px">${sym}</div>
+          <div style="font-weight:700;font-size:15px;color:#EAECEF;letter-spacing:0.5px">${pair.replace('/','')}</div>
           <div style="display:flex;align-items:center;gap:6px">
             <span id="pairCurrentPrice" style="font-size:13px;color:#7B8CA2;font-family:monospace">...</span>
             <span id="pairChange24h" style="font-size:12px;font-weight:600;font-family:monospace">...</span>
