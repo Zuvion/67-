@@ -2149,6 +2149,7 @@ async def api_stats(db: AsyncSession=Depends(get_db), request: Request=None):
     wins_count = len([t for t in closed_trades if t.result == "win"])
     losses_count = len([t for t in closed_trades if t.result == "loss"])
     total_closed = len(closed_trades)
+    volume_usdt = sum(t.amount_usdt for t in all_trades if t.amount_usdt)
     
     return {"earned":round(earned,4),"lost":round(lost,4),"balance":round(u.balance_usdt or 0,4),
             "trades":[{"pair":t.pair,"side":t.side,"amount_usdt":t.amount_usdt,"result":t.result or "-","opened_at":t.opened_at.isoformat()} for t in trades],
@@ -2160,6 +2161,7 @@ async def api_stats(db: AsyncSession=Depends(get_db), request: Request=None):
             "wins_count": wins_count,
             "losses_count": losses_count,
             "total_trades": total_closed,
+            "volume_usdt": round(volume_usdt, 2),
             "telegram_id": u.telegram_id}
 
 @app.get("/api/support")
