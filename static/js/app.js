@@ -2607,8 +2607,21 @@ async function openPair(pair, displayName = null){
 
   let candleIntervalSec = selectedTimeframe * 60;
 
+  let tradeActive = false;
+  let tradeMicroCandleInterval = 5;
+  let tradeMicroCandleCounter = 0;
+  let tradeStartCandleTime = 0;
+
   function getCandleStartTime(unixSec) {
     return Math.floor(unixSec / candleIntervalSec) * candleIntervalSec;
+  }
+
+  function getTradeCandelInterval(durationSec) {
+    if (durationSec <= 30) return 3;
+    if (durationSec <= 60) return 5;
+    if (durationSec <= 180) return 8;
+    if (durationSec <= 600) return 12;
+    return 15;
   }
 
   const tickTimer = setInterval(async () => {
@@ -2622,12 +2635,23 @@ async function openPair(pair, displayName = null){
       if (!currentPrice || currentPrice <= 0) return;
       realPrice = currentPrice;
 
-      if (activeTradeForPair && localTimeLeftSec === null) {
+      if (activeTradeForPair && !tradeActive) {
+        tradeActive = true;
         localTimeLeftSec = activeTradeForPair.time_left_sec || 0;
         lastTradeUpdateTime = Date.now();
+        const totalDuration = activeTradeForPair.duration_sec || 60;
+        tradeMicroCandleInterval = getTradeCandelInterval(totalDuration);
+        tradeMicroCandleCounter = 0;
+        tradeStartCandleTime = lastCandleData ? lastCandleData.time : Math.floor(Date.now() / 1000);
       }
 
-      if (activeTradeForPair && localTimeLeftSec > 0) {
+      if (!activeTradeForPair && tradeActive) {
+        tradeActive = false;
+        localTimeLeftSec = null;
+        tradeMicroCandleCounter = 0;
+      }
+
+      if (tradeActive && localTimeLeftSec > 0) {
         const now = Date.now();
         const elapsed_ms = now - lastTradeUpdateTime;
         lastTradeUpdateTime = now;
@@ -2641,59 +2665,37 @@ async function openPair(pair, displayName = null){
         const sideDir = activeTradeForPair.side === 'buy' ? 1 : -1;
         const direction = sideDir * serverTrend;
 
-        const isLongTrade = totalDuration >= 120;
         const baseVolatility = currentPrice * 0.0003;
 
-        let easeProgress, maxShift, smoothing, noiseAmp;
+        let trendStrength, noiseAmp;
 
-        if (isLongTrade) {
-          if (progress < 0.6) {
-            easeProgress = progress * 0.05;
-            maxShift = currentPrice * 0.0003;
-            smoothing = 0.95;
-            noiseAmp = 1.5;
-          } else if (progress < 0.85) {
-            const p = (progress - 0.6) / 0.25;
-            easeProgress = 0.03 + p * p * 0.4;
-            maxShift = currentPrice * (0.0004 + p * 0.0006);
-            smoothing = 0.88;
-            noiseAmp = 1.0;
-          } else {
-            const p = (progress - 0.85) / 0.15;
-            easeProgress = 0.43 + p * p * 0.57;
-            maxShift = currentPrice * (0.0008 + p * 0.0008);
-            smoothing = 0.78;
-            noiseAmp = 0.5;
-          }
+        if (progress < 0.3) {
+          trendStrength = 0.15 + Math.random() * 0.1;
+          noiseAmp = 1.8;
+        } else if (progress < 0.5) {
+          const waveSin = Math.sin(progress * Math.PI * 6);
+          trendStrength = 0.2 + waveSin * 0.15;
+          noiseAmp = 1.4;
+        } else if (progress < 0.7) {
+          trendStrength = 0.3 + (progress - 0.5) * 1.5;
+          noiseAmp = 1.0;
+        } else if (progress < 0.9) {
+          trendStrength = 0.5 + (progress - 0.7) * 2.0;
+          noiseAmp = 0.6;
         } else {
-          if (progress < 0.4) {
-            easeProgress = progress * 0.15;
-            maxShift = currentPrice * 0.0004;
-            smoothing = 0.92;
-            noiseAmp = 1.3;
-          } else if (progress < 0.75) {
-            const p = (progress - 0.4) / 0.35;
-            easeProgress = 0.06 + p * 0.45;
-            maxShift = currentPrice * (0.0005 + p * 0.0007);
-            smoothing = 0.85;
-            noiseAmp = 0.9;
-          } else {
-            const p = (progress - 0.75) / 0.25;
-            easeProgress = 0.51 + p * p * 0.49;
-            maxShift = currentPrice * (0.0008 + p * 0.0006);
-            smoothing = 0.78;
-            noiseAmp = 0.4;
-          }
+          trendStrength = 0.9 + (progress - 0.9) * 1.0;
+          noiseAmp = 0.3;
         }
-        
-        const targetOffset = direction * maxShift * Math.min(easeProgress, 1);
+
+        const maxShift = currentPrice * 0.0008;
+        const trendComponent = direction * maxShift * trendStrength;
         const noise = (Math.random() - 0.5) * baseVolatility * noiseAmp;
-        priceOffset = priceOffset * smoothing + (targetOffset + noise) * (1 - smoothing);
+        const counterTrendChance = progress < 0.6 ? 0.35 : 0.15;
+        const counterTrend = Math.random() < counterTrendChance ? -direction * baseVolatility * 0.5 : 0;
+
+        priceOffset = priceOffset * 0.88 + (trendComponent + noise + counterTrend) * 0.12;
         returningToReal = false;
-      } else {
-        if (!activeTradeForPair) {
-          localTimeLeftSec = null;
-        }
+      } else if (!tradeActive) {
         if (priceOffset !== 0) {
           returningToReal = true;
           priceOffset *= 0.85;
@@ -2707,20 +2709,24 @@ async function openPair(pair, displayName = null){
       const displayPrice = currentPrice + priceOffset;
 
       const nowSec = Math.floor(Date.now() / 1000);
-      const currentCandleStart = getCandleStartTime(nowSec);
 
-      if (lastCandleData) {
-        if (currentCandleStart > lastCandleData.time) {
+      if (tradeActive) {
+        tradeMicroCandleCounter++;
+
+        if (tradeMicroCandleCounter >= tradeMicroCandleInterval || !lastCandleData) {
+          tradeMicroCandleCounter = 0;
+          const newCandleTime = lastCandleData ? lastCandleData.time + tradeMicroCandleInterval : nowSec;
+          const prevClose = lastCandleData ? lastCandleData.close : displayPrice;
           lastCandleData = {
-            time: currentCandleStart,
-            open: displayPrice,
-            high: displayPrice,
-            low: displayPrice,
+            time: newCandleTime,
+            open: prevClose,
+            high: Math.max(prevClose, displayPrice),
+            low: Math.min(prevClose, displayPrice),
             close: displayPrice,
           };
           candleSeries.update(lastCandleData);
           chart.timeScale().scrollToPosition(2, false);
-        } else {
+        } else if (lastCandleData) {
           lastCandleData.high = Math.max(lastCandleData.high, displayPrice);
           lastCandleData.low = Math.min(lastCandleData.low, displayPrice);
           lastCandleData.close = displayPrice;
@@ -2731,6 +2737,33 @@ async function openPair(pair, displayName = null){
             low: lastCandleData.low,
             close: lastCandleData.close,
           });
+        }
+      } else {
+        const currentCandleStart = getCandleStartTime(nowSec);
+
+        if (lastCandleData) {
+          if (currentCandleStart > lastCandleData.time) {
+            lastCandleData = {
+              time: currentCandleStart,
+              open: displayPrice,
+              high: displayPrice,
+              low: displayPrice,
+              close: displayPrice,
+            };
+            candleSeries.update(lastCandleData);
+            chart.timeScale().scrollToPosition(2, false);
+          } else {
+            lastCandleData.high = Math.max(lastCandleData.high, displayPrice);
+            lastCandleData.low = Math.min(lastCandleData.low, displayPrice);
+            lastCandleData.close = displayPrice;
+            candleSeries.update({
+              time: lastCandleData.time,
+              open: lastCandleData.open,
+              high: lastCandleData.high,
+              low: lastCandleData.low,
+              close: lastCandleData.close,
+            });
+          }
         }
       }
     } catch(e) {}
