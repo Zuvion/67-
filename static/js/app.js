@@ -2018,57 +2018,45 @@ async function openPair(pair, displayName = null){
   
   cont.innerHTML = `
   <div class="container" style="padding:0;height:calc(100vh - 56px);overflow-y:auto;overflow-x:hidden">
-    <!-- Кнопки таймфреймов -->
-    <div id="timeframeBar" style="display:flex;gap:4px;padding:8px 10px;background:#0e1219;border-bottom:1px solid #1f2937;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none">
-      <button class="tf-btn" data-tf="1" style="padding:6px 12px;background:#1f2937;border:none;border-radius:4px;color:#9ca3af;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s">${t('trade.duration.1m')}</button>
-      <button class="tf-btn active" data-tf="5" style="padding:6px 12px;background:#8b5cf6;border:none;border-radius:4px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s">${t('trade.duration.5m')}</button>
-      <button class="tf-btn" data-tf="15" style="padding:6px 12px;background:#1f2937;border:none;border-radius:4px;color:#9ca3af;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s">${t('trade.duration.15m')}</button>
-      <button class="tf-btn" data-tf="30" style="padding:6px 12px;background:#1f2937;border:none;border-radius:4px;color:#9ca3af;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s">${t('trade.duration.30m')}</button>
-      <button class="tf-btn" data-tf="60" style="padding:6px 12px;background:#1f2937;border:none;border-radius:4px;color:#9ca3af;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s">${t('trade.duration.1h')}</button>
-      <button class="tf-btn" data-tf="240" style="padding:6px 12px;background:#1f2937;border:none;border-radius:4px;color:#9ca3af;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s">${t('trade.duration.4h')}</button>
-      <button class="tf-btn" data-tf="1440" style="padding:6px 12px;background:#1f2937;border:none;border-radius:4px;color:#9ca3af;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s">${t('trade.duration.1d')}</button>
-    </div>
+    <!-- TradingView Lightweight Chart -->
+    <div id="price_chart" style="height:50vh;min-height:280px;max-height:480px;width:100%;background:#0e1219;position:relative"></div>
     
-    <!-- TradingView Lightweight Chart (OKX Data) -->
-    <div id="price_chart" style="height:30vh;min-height:160px;max-height:280px;width:100%;background:#0e1219;position:relative"></div>
-    
-    <!-- Trade Parameters Block -->
-    <div id="tradeParamsBlock" style="padding:8px 12px;background:#0e1219;border-top:1px solid #1f2937">
-      <!-- Amount + Timer Row (compact) -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <div style="flex:1;display:flex;align-items:center;background:#1f2937;border-radius:6px;padding:4px 8px">
-          <input type="number" id="quickAmount" value="100" min="5" step="10" 
-            style="flex:1;background:transparent;border:none;color:#E040FB;font-size:15px;font-weight:700;font-family:monospace;outline:none;width:50px" />
-          <span style="color:#7B8CA2;font-size:11px;font-weight:600">USDT</span>
-        </div>
-        <div style="display:flex;gap:3px;overflow-x:auto;scrollbar-width:none">
-          <button class="timer-btn" data-dur="30" style="padding:5px 8px;background:#1f2937;border:1px solid transparent;border-radius:4px;color:#9ca3af;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;font-family:monospace">${t('trade.duration.30s')}</button>
-          <button class="timer-btn active" data-dur="60" style="padding:5px 8px;background:#E040FB;border:1px solid #E040FB;border-radius:4px;color:#0A0E17;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;font-family:monospace">${t('trade.duration.1m')}</button>
-          <button class="timer-btn" data-dur="300" style="padding:5px 8px;background:#1f2937;border:1px solid transparent;border-radius:4px;color:#9ca3af;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;font-family:monospace">${t('trade.duration.5m')}</button>
-          <button class="timer-btn" data-dur="900" style="padding:5px 8px;background:#1f2937;border:1px solid transparent;border-radius:4px;color:#9ca3af;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;font-family:monospace">${t('trade.duration.15m')}</button>
-          <button class="timer-btn" data-dur="1800" style="padding:5px 8px;background:#1f2937;border:1px solid transparent;border-radius:4px;color:#9ca3af;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;font-family:monospace">${t('trade.duration.30m')}</button>
+    <!-- Pair Info Row -->
+    <div id="pairInfoRow" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#0e1219;border-top:1px solid #1f2937">
+      <div style="display:flex;align-items:center;gap:10px">
+        <img src="${logo}" style="width:32px;height:32px;border-radius:50%" onerror="this.style.display='none'" />
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#EAECEF;letter-spacing:0.5px">${sym}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span id="pairCurrentPrice" style="font-size:13px;color:#7B8CA2;font-family:monospace">...</span>
+            <span id="pairChange24h" style="font-size:12px;font-weight:600;font-family:monospace">...</span>
+          </div>
         </div>
       </div>
-      
-      <!-- Potential Profit Display -->
-      <div id="profitPreview" style="text-align:center;padding:5px 8px;background:rgba(14,203,129,0.1);border:1px solid rgba(14,203,129,0.3);border-radius:6px;font-size:12px">
-        <span style="color:#7B8CA2">${t('trade.stake_label')} </span>
-        <span id="stakeDisplay" style="color:#E040FB;font-weight:700;font-family:monospace">100 USDT</span>
-        <span style="color:#7B8CA2"> → </span>
-        <span style="color:#00E676;font-weight:700">${t('trade.potential_profit')} </span>
-        <span id="profitDisplay" style="color:#00E676;font-weight:700;font-family:monospace">+70 USDT</span>
+      <div style="display:flex;gap:4px;overflow-x:auto;scrollbar-width:none">
+        <button class="tf-btn" data-tf="1" style="padding:5px 10px;background:#1f2937;border:none;border-radius:4px;color:#9ca3af;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s">1m</button>
+        <button class="tf-btn active" data-tf="5" style="padding:5px 10px;background:#E040FB;border:none;border-radius:4px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s">5m</button>
+        <button class="tf-btn" data-tf="15" style="padding:5px 10px;background:#1f2937;border:none;border-radius:4px;color:#9ca3af;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s">15m</button>
+        <button class="tf-btn" data-tf="60" style="padding:5px 10px;background:#1f2937;border:none;border-radius:4px;color:#9ca3af;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s">1h</button>
+        <button class="tf-btn" data-tf="1440" style="padding:5px 10px;background:#1f2937;border:none;border-radius:4px;color:#9ca3af;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s">1d</button>
       </div>
     </div>
+
+    <!-- Hidden inputs for trade params -->
+    <input type="hidden" id="quickAmount" value="100" />
+    <div id="stakeDisplay" style="display:none">100 USDT</div>
+    <div id="profitDisplay" style="display:none">+70 USDT</div>
     
-    <!-- Список сделок -->
-    <div style="padding:0 12px 80px;margin-top:12px">
-      <div style="font-weight:600;font-size:14px;color:#fff;margin-bottom:8px">${t('trade.list.title')}</div>
-      <div style="display:flex;gap:12px;margin-bottom:8px;border-bottom:1px solid #1f1f1f">
-        <div class="trade-tab active" data-filter="active" style="padding:6px 0;color:#E040FB;font-weight:600;border-bottom:2px solid #E040FB;cursor:pointer;font-size:13px">${t('trade.list.active')}</div>
-        <div class="trade-tab" data-filter="closed" style="padding:6px 0;color:#9ca3af;font-weight:600;cursor:pointer;font-size:13px">${t('trade.list.closed')}</div>
-        <div class="trade-tab" data-filter="all" style="padding:6px 0;color:#9ca3af;font-weight:600;cursor:pointer;font-size:13px">${t('trade.list.all')}</div>
+    <!-- Trade List -->
+    <div style="padding:0 16px 100px;margin-top:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px;color:#E040FB;font-weight:600">${t('trade.list.title')}</div>
+        <div style="display:flex;gap:4px">
+          <div class="trade-tab active" data-filter="active" style="padding:5px 14px;color:#fff;font-weight:600;background:#1f2937;border-radius:16px;cursor:pointer;font-size:12px">${t('trade.list.active')}</div>
+          <div class="trade-tab" data-filter="all" style="padding:5px 14px;color:#9ca3af;font-weight:500;background:transparent;border-radius:16px;cursor:pointer;font-size:12px">${t('trade.list.all')}</div>
+        </div>
       </div>
-      <div id="tradesList" style="max-height:30vh;overflow-y:auto;overflow-x:hidden"></div>
+      <div id="tradesList" style="max-height:35vh;overflow-y:auto;overflow-x:hidden"></div>
     </div>
   </div>
   
@@ -2135,13 +2123,13 @@ async function openPair(pair, displayName = null){
   if (tradeFixedEl) tradeFixedEl.remove();
   tradeFixedEl = document.createElement('div');
   tradeFixedEl.id = 'tradeButtonsFixed';
-  tradeFixedEl.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:calc(100% - 24px);max-width:460px;padding:10px 0;display:flex;gap:10px;z-index:200;';
+  tradeFixedEl.style.cssText = 'position:fixed;bottom:70px;left:0;right:0;padding:8px 16px;display:flex;gap:10px;z-index:200;background:linear-gradient(to top, #0A0E17 60%, transparent);';
   tradeFixedEl.innerHTML = `
-    <button class="btn btn-green" id="btnBuy" style="flex:1;font-size:15px;font-weight:700;padding:14px;border-radius:10px;box-shadow:0 4px 12px rgba(0,230,118,0.4);background:#00E676;color:#0A0E17;font-family:monospace;border:none;cursor:pointer">
+    <button class="btn btn-green" id="btnBuy" style="flex:1;font-size:15px;font-weight:700;padding:15px;border-radius:12px;background:#00E676;color:#0A0E17;border:none;cursor:pointer">
       <span id="btnBuyText">${t('trade.buy')}</span>
       <span id="btnBuyTimer" style="display:none;margin-left:4px"></span>
     </button>
-    <button class="btn btn-red" id="btnSell" style="flex:1;font-size:15px;font-weight:700;padding:14px;border-radius:10px;box-shadow:0 4px 12px rgba(255,82,82,0.4);background:#FF5252;color:#fff;font-family:monospace;border:none;cursor:pointer">
+    <button class="btn btn-red" id="btnSell" style="flex:1;font-size:15px;font-weight:700;padding:15px;border-radius:12px;background:#FF5252;color:#fff;border:none;cursor:pointer">
       <span id="btnSellText">${t('trade.sell')}</span>
       <span id="btnSellTimer" style="display:none;margin-left:4px"></span>
     </button>
@@ -2635,6 +2623,18 @@ async function openPair(pair, displayName = null){
       if (!currentPrice || currentPrice <= 0) return;
       realPrice = currentPrice;
 
+      const priceEl = document.getElementById('pairCurrentPrice');
+      const changeEl = document.getElementById('pairChange24h');
+      if (priceEl) {
+        priceEl.textContent = currentPrice < 1 ? currentPrice.toFixed(6) : Number(currentPrice).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+      }
+      if (changeEl && priceData && typeof priceData === 'object' && priceData.change_24h !== undefined) {
+        const ch = priceData.change_24h;
+        const isPos = ch >= 0;
+        changeEl.textContent = (isPos ? '+' : '') + ch.toFixed(2) + '%';
+        changeEl.style.color = isPos ? '#00E676' : '#FF5252';
+      }
+
       if (activeTradeForPair && !tradeActive) {
         tradeActive = true;
         localTimeLeftSec = activeTradeForPair.time_left_sec || 0;
@@ -2781,7 +2781,7 @@ async function openPair(pair, displayName = null){
         b.style.color = '#9ca3af';
         b.classList.remove('active');
       });
-      btn.style.background = '#8b5cf6';
+      btn.style.background = '#E040FB';
       btn.style.color = '#fff';
       btn.classList.add('active');
       
@@ -2806,11 +2806,13 @@ async function openPair(pair, displayName = null){
       document.querySelectorAll('.trade-tab').forEach(t => {
         t.classList.remove('active');
         t.style.color = '#9ca3af';
-        t.style.borderBottom = 'none';
+        t.style.background = 'transparent';
+        t.style.fontWeight = '500';
       });
       tab.classList.add('active');
-      tab.style.color = '#624DE4';
-      tab.style.borderBottom = '2px solid #624DE4';
+      tab.style.color = '#fff';
+      tab.style.background = '#1f2937';
+      tab.style.fontWeight = '600';
       currentFilter = tab.getAttribute('data-filter');
       loadTradesList(currentFilter, pair);
     };
@@ -3501,25 +3503,102 @@ async function activateCheck(checkCode) {
 // -------- Profile (non-admin) ----------
 async function renderProfile() {
   setActive('profile');
+  restoreHeader();
   const root = document.getElementById('root');
   root.innerHTML = '<div class="container" style="padding:16px"><div style="text-align:center;padding:40px 0;color:#7B8CA2">' + t('common.loading_short') + '</div></div>';
   try {
     const res = await apiFetch('/api/user');
     const u = await res.json();
+    let stats = { wins_count: 0, losses_count: 0, total_trades: 0, volume_usdt: 0 };
+    try { stats = await (await apiFetch('/api/stats')).json(); } catch(e) {}
+
+    const totalTrades = stats.total_trades || 0;
+    const winsCount = stats.wins_count || 0;
+    const lossesCount = stats.losses_count || 0;
+    const volume = stats.volume_usdt || 0;
+
     root.innerHTML = `
-    <div class="container" style="padding:16px">
-      <div class="profile-section">
-        <div class="profile-section-title">${t('profile.my_profile')}</div>
-        <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
-          <div class="stat-row"><span class="stat-label">Profile ID</span><span class="stat-value">#${u.profile_id || '—'}</span></div>
-          <div class="stat-row"><span class="stat-label">Username</span><span class="stat-value">@${u.username || '—'}</span></div>
-          <div class="stat-row"><span class="stat-label">${t('profile.verification')}</span><span class="stat-value">${u.is_verified ? t('profile.verified_yes') : t('profile.verified_no')}</span></div>
-          <div class="stat-row"><span class="stat-label">Premium</span><span class="stat-value">${u.is_premium ? t('profile.premium_active') : '—'}</span></div>
-          <div class="stat-row"><span class="stat-label">${t('profile.balance_label')}</span><span class="stat-value" style="color:#E040FB">${fmtNum(u.balance_usdt || 0, 2)} USDT</span></div>
-          <div class="stat-row"><span class="stat-label">${t('admin.registration_date')}</span><span class="stat-value">${u.created_at ? new Date(u.created_at).toLocaleDateString(i18n.lang === 'ru' ? 'ru-RU' : 'en-US') : '—'}</span></div>
+    <div class="container" style="padding:0 0 90px 0">
+      <!-- Balance Block -->
+      <div style="text-align:center;padding:32px 20px 24px">
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px">
+          <div style="font-size:13px;color:#7B8CA2">${t('common.balance')}</div>
+          <div id="profileSettingsBtn" style="cursor:pointer;color:#7B8CA2;font-size:16px">⚙️</div>
+        </div>
+        <div style="font-size:36px;font-weight:700;color:#fff;font-family:monospace;letter-spacing:-1px">${fmtNum(u.balance_usdt || 0, 2)}<span style="font-size:22px;color:#7B8CA2;margin-left:4px">$</span></div>
+        
+        <div style="display:flex;justify-content:center;gap:32px;margin-top:24px">
+          <div id="profileDeposit" style="text-align:center;cursor:pointer">
+            <div style="width:48px;height:48px;border-radius:50%;background:rgba(224,64,251,0.12);border:1.5px solid rgba(224,64,251,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 6px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E040FB" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </div>
+            <div style="font-size:11px;color:#E040FB;font-weight:500">${t('btn.deposit')}</div>
+          </div>
+          <div id="profileWithdraw" style="text-align:center;cursor:pointer">
+            <div style="width:48px;height:48px;border-radius:50%;background:rgba(124,77,255,0.12);border:1.5px solid rgba(124,77,255,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 6px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C4DFF" stroke-width="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            </div>
+            <div style="font-size:11px;color:#7C4DFF;font-weight:500">${t('btn.withdraw')}</div>
+          </div>
+          <div id="profileExchange" style="text-align:center;cursor:pointer">
+            <div style="width:48px;height:48px;border-radius:50%;background:rgba(0,230,118,0.12);border:1.5px solid rgba(0,230,118,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 6px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00E676" stroke-width="2.5"><path d="M7 16l-4-4 4-4M17 8l4 4-4 4M3 12h18"/></svg>
+            </div>
+            <div style="font-size:11px;color:#00E676;font-weight:500">${t('btn.exchange')}</div>
+          </div>
         </div>
       </div>
+
+      <!-- Profile Section -->
+      <div style="margin:0 16px;padding:20px;background:#131A2A;border-radius:16px;border:1px solid rgba(255,255,255,0.06)">
+        <div style="font-size:13px;color:#E040FB;font-weight:600;margin-bottom:16px">${t('profile.title')}</div>
+        
+        <div style="margin-bottom:16px">
+          <div style="font-size:22px;font-weight:700;color:#EAECEF;font-family:monospace">${stats.telegram_id || u.profile_id || TG_USER?.id || '—'}</div>
+          <div style="font-size:12px;color:#7B8CA2;margin-top:2px">ID ${t('profile.account_id')}</div>
+        </div>
+
+        <div style="margin-bottom:16px">
+          <div style="font-size:20px;font-weight:700;color:#EAECEF">
+            <span>${totalTrades}</span>
+            <span style="color:#7B8CA2"> / </span>
+            <span style="color:#00E676">${winsCount}</span>
+            <span style="color:#7B8CA2"> / </span>
+            <span style="color:#FF5252">${lossesCount}</span>
+          </div>
+          <div style="font-size:12px;color:#7B8CA2;margin-top:2px">${t('profile.statistics')}</div>
+        </div>
+
+        <div style="margin-bottom:16px">
+          <div style="font-size:20px;font-weight:700;color:#EAECEF;font-family:monospace">${fmtNum(volume, 2)} USDT</div>
+          <div style="font-size:12px;color:#7B8CA2;margin-top:2px">${t('profile.volume')}</div>
+        </div>
+
+        <div style="margin-bottom:16px">
+          <div style="font-size:17px;font-weight:600;color:#EAECEF">${u.is_verified ? t('profile.verified_yes') : t('profile.verified_no')}</div>
+          <div style="font-size:12px;color:#7B8CA2;margin-top:2px">${t('profile.verification_status')}</div>
+        </div>
+
+        <div>
+          <div style="font-size:17px;font-weight:600;color:#EAECEF">${u.is_premium ? 'Premium' : 'Standard'}</div>
+          <div style="font-size:12px;color:#7B8CA2;margin-top:2px">${t('profile.account_status')}</div>
+        </div>
+      </div>
+
+      ${u.is_premium ? `
+      <div style="margin:12px 16px 0">
+        <button id="btnProfileCreateCheck" style="width:100%;padding:14px;background:linear-gradient(135deg,#E040FB,#7C4DFF);color:#fff;font-weight:600;font-size:14px;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span>🎁</span> ${t('account.gift_check')}
+        </button>
+      </div>
+      ` : ''}
     </div>`;
+
+    document.getElementById('profileDeposit').onclick = openDeposit;
+    document.getElementById('profileWithdraw').onclick = openWithdraw;
+    document.getElementById('profileExchange').onclick = openExchange;
+    const btnCheck = document.getElementById('btnProfileCreateCheck');
+    if (btnCheck) btnCheck.onclick = () => openCreateCheckModal();
   } catch(e) {
     root.innerHTML = '<div class="container" style="padding:16px"><div style="text-align:center;padding:40px 0;color:#FF5252">' + t('common.loading_profile') + '</div></div>';
   }
