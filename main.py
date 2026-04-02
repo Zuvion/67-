@@ -1974,28 +1974,6 @@ async def api_trade_status(order_id:int, db: AsyncSession=Depends(get_db), reque
             trx.details = {**existing_details, "result": tr.result, "payout": tr.payout, "close_price": cur}
         await db.commit()
         
-        displayed_balance = u.balance_usdt or 0
-        try:
-            if win:
-                profit = round(payout, 2)
-                emoji = "🎉"
-                msg = f"{emoji} <b>ВЫИГРЫШ!</b>\n\n"
-                msg += f"📊 Пара: {tr.pair}\n"
-                msg += f"📈 Направление: {'ВВЕРХ ⬆️' if tr.side == 'buy' else 'ВНИЗ ⬇️'}\n"
-                msg += f"💰 Ставка: {round(tr.amount_usdt, 2)} USDT\n"
-                msg += f"✅ Выплата: +{profit} USDT\n"
-                msg += f"💵 Баланс: {round(displayed_balance, 2)} USDT"
-            else:
-                emoji = "😔"
-                msg = f"{emoji} <b>Не повезло</b>\n\n"
-                msg += f"📊 Пара: {tr.pair}\n"
-                msg += f"📈 Направление: {'ВВЕРХ ⬆️' if tr.side == 'buy' else 'ВНИЗ ⬇️'}\n"
-                msg += f"💰 Ставка: -{round(tr.amount_usdt, 2)} USDT\n"
-                msg += f"💵 Баланс: {round(displayed_balance, 2)} USDT\n\n"
-                msg += f"💪 Попробуйте еще раз!"
-            
-            await bot_send_message(int(u.telegram_id), msg, parse_mode="HTML")
-        except: pass
     return {"order_id": tr.id, "status": tr.status, "result": tr.result, "amount_usdt": tr.amount_usdt, "payout": tr.payout, "opened_at": tr.opened_at.isoformat()}
 
 @app.get("/api/trade/active")
@@ -3319,16 +3297,6 @@ async def poll_expired_trades():
                         
                         expired_count += 1
                         
-                        displayed_balance = u.balance_usdt or 0
-                        try:
-                            if win:
-                                profit = round(payout, 2)
-                                msg = f"🎉 <b>ВЫИГРЫШ!</b>\n\n📊 Пара: {tr.pair}\n💰 Ставка: {round(tr.amount_usdt, 2)} USDT\n✅ Выплата: +{profit} USDT\n💵 Баланс: {round(displayed_balance, 2)} USDT"
-                            else:
-                                msg = f"😔 <b>Сделка закрыта</b>\n\n📊 Пара: {tr.pair}\n💰 Ставка: {round(tr.amount_usdt, 2)} USDT\n❌ Результат: Проигрыш\n💵 Баланс: {round(displayed_balance, 2)} USDT"
-                            await bot_send_message(int(u.telegram_id), msg)
-                        except:
-                            pass
                 
                 if expired_count > 0:
                     await db.commit()
