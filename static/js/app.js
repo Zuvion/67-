@@ -744,7 +744,7 @@ async function renderAssets(){
     const cachedStats = cacheGet('stats');
     if (!cachedUser) showAssetsSkeleton();
     
-    const [user, stats, prices, historyData] = await Promise.all([
+    const [user, stats, , historyData] = await Promise.all([
       cachedFetch('user', '/api/user'),
       cachedFetch('stats', '/api/stats'),
       cachedFetch('prices', '/api/prices'),
