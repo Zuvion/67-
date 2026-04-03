@@ -2145,7 +2145,7 @@ async def api_stats(db: AsyncSession=Depends(get_db), request: Request=None):
                 soonest = remaining
         next_trade_seconds = int(soonest) if soonest else None
     
-    closed_trades = [t for t in all_trades if t.status == "closed"]
+    closed_trades = [t for t in all_trades if t.status in ("completed", "closed")]
     wins_count = len([t for t in closed_trades if t.result == "win"])
     losses_count = len([t for t in closed_trades if t.result == "loss"])
     total_closed = len(closed_trades)
