@@ -282,6 +282,35 @@ function countUp(element, target, duration = 1000, decimals = 2) {
   requestAnimationFrame(update);
 }
 
+// -------- Data Cache for instant navigation ----------
+const _cache = { user: null, stats: null, prices: null, tickers: null, history: null, ts: {} };
+const CACHE_TTL = 10000;
+
+function cacheSet(key, data) {
+  _cache[key] = data;
+  _cache.ts[key] = Date.now();
+}
+function cacheGet(key) {
+  if (_cache[key] && _cache.ts[key] && (Date.now() - _cache.ts[key]) < CACHE_TTL) return _cache[key];
+  return null;
+}
+async function cachedFetch(key, url) {
+  const cached = cacheGet(key);
+  if (cached) return cached;
+  try {
+    const res = await apiFetch(url);
+    const data = await res.json();
+    cacheSet(key, data);
+    return data;
+  } catch(e) { return cached || _cache[key] || null; }
+}
+function preloadAll() {
+  cachedFetch('user', '/api/user');
+  cachedFetch('stats', '/api/stats');
+  cachedFetch('prices', '/api/prices');
+  cachedFetch('tickers', '/api/tickers');
+}
+
 // -------- Skeleton Loading ----------
 function showAssetsSkeleton() {
   const cont = document.getElementById('root');
@@ -707,16 +736,22 @@ window._historyGoPage = function(page) {
 // -------- Assets (ЛК) ----------
 async function renderAssets(){
   try{
-    restoreHeader(); // Restore original header
+    restoreHeader();
     setActive('assets');
     const cont=document.getElementById('root');
     
-    // Show skeleton loading first
-    showAssetsSkeleton();
+    const cachedUser = cacheGet('user');
+    const cachedStats = cacheGet('stats');
+    if (!cachedUser) showAssetsSkeleton();
     
-    let user={ balance_usdt:0, wallets:{}, addresses:{}, profile_id:0 };
-    try{ user = await (await apiFetch('/api/user')).json(); }catch(e){ console.error('api/user failed',e); }
-    userData = user;
+    const [user, stats, prices, historyData] = await Promise.all([
+      cachedFetch('user', '/api/user'),
+      cachedFetch('stats', '/api/stats'),
+      cachedFetch('prices', '/api/prices'),
+      cachedFetch('history', '/api/history')
+    ]);
+    
+    userData = user || { balance_usdt:0, wallets:{}, addresses:{}, profile_id:0 };
     const navProfile = document.getElementById('navProfile');
     const navProfileLabel = document.getElementById('navProfileLabel');
     if(navProfile) {
@@ -728,8 +763,7 @@ async function renderAssets(){
       }
     }
     
-    // Check if user is blocked
-    if(user.is_blocked){
+    if(user && user.is_blocked){
       const reason = user.block_reason || (t('account.blocked_reason'));
       cont.innerHTML = `
         <div class="container" style="padding-top:80px">
@@ -748,10 +782,9 @@ async function renderAssets(){
       return;
     }
     
-    await updateRates();
+    updateRates();
 
-    let stats = { pnl_today: 0, pnl_total: 0, active_trades_count: 0, next_trade_seconds: null, wins_count: 0, losses_count: 0, total_trades: 0, telegram_id: null };
-    try { stats = await (await apiFetch('/api/stats')).json(); } catch(e) {}
+    const st = stats || { pnl_today: 0, pnl_total: 0, active_trades_count: 0, next_trade_seconds: null, wins_count: 0, losses_count: 0, total_trades: 0, telegram_id: null };
 
     const pnlTodayColor = stats.pnl_today >= 0 ? '#00E676' : '#FF5252';
     const pnlTotalColor = stats.pnl_total >= 0 ? '#00E676' : '#FF5252';
@@ -1943,13 +1976,9 @@ async function renderTrade(){
   const pairs=["BTC/USDT","ETH/USDT","SOL/USDT","ADA/USDT","DOT/USDT","LINK/USDT","MATIC/USDT","AVAX/USDT","XRP/USDT","DOGE/USDT","SHIB/USDT","UNI/USDT","LTC/USDT","BCH/USDT","TRX/USDT"];
   const wrap=document.getElementById('pairList');
   
-  // Fetch tickers with prices and 24h change
   let tickers = {};
   try {
-    const res = await apiFetch('/api/tickers');
-    if (res.ok) {
-      tickers = await res.json();
-    }
+    tickers = await cachedFetch('tickers', '/api/tickers') || {};
   } catch (e) {}
   
   // Full crypto names
@@ -2985,6 +3014,7 @@ async function placeOrder(pair, side, duration, amount){
     const res=await apiFetch('/api/trade/order',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pair, side, amount_usdt: amt, duration_sec: dur }) });
     const data=await res.json();
     if(!data.ok){ toast(data.error||t('toast.error')); return; }
+    _cache.ts.user = 0; _cache.ts.stats = 0; _cache.ts.history = 0;
     const direction = side === 'buy' ? '⬆️ ' + t('trade.up') : '⬇️ ' + t('trade.down');
     const orderFilledText = t('trade.order_filled');
     toast(`${orderFilledText}: ${direction} ${dur >= 60 ? Math.floor(dur/60) + (' ' + t('trade.min_unit')) : dur + (' ' + t('trade.sec_unit'))}`);
@@ -3023,7 +3053,7 @@ async function renderReferrals(){
   setActive('referrals');
   const cont=document.getElementById('root');
   let ref = { referral_code:'', referral_count:0, referral_earnings:0, referrals:[] };
-  try{ ref = await (await apiFetch('/api/referrals')).json(); }catch(e){ console.error('referrals failed', e); }
+  try{ ref = await cachedFetch('referrals', '/api/referrals') || ref; }catch(e){ console.error('referrals failed', e); }
   
   const botUsername = 'Cryptexa_rubot';
   const refLink = `https://t.me/${botUsername}?start=${ref.referral_code}`;
@@ -3498,12 +3528,13 @@ async function renderProfile() {
   setActive('profile');
   restoreHeader();
   const root = document.getElementById('root');
-  root.innerHTML = '<div class="container" style="padding:16px"><div style="text-align:center;padding:40px 0;color:#7B8CA2">' + t('common.loading_short') + '</div></div>';
+  const cachedU = cacheGet('user');
+  if (!cachedU) root.innerHTML = '<div class="container" style="padding:16px"><div style="text-align:center;padding:40px 0;color:#7B8CA2">' + t('common.loading_short') + '</div></div>';
   try {
-    const res = await apiFetch('/api/user');
-    const u = await res.json();
-    let stats = { wins_count: 0, losses_count: 0, total_trades: 0, volume_usdt: 0 };
-    try { stats = await (await apiFetch('/api/stats')).json(); } catch(e) {}
+    const [u, stats] = await Promise.all([
+      cachedFetch('user', '/api/user').then(d => d || { balance_usdt:0 }),
+      cachedFetch('stats', '/api/stats').then(d => d || { wins_count: 0, losses_count: 0, total_trades: 0, volume_usdt: 0 })
+    ]);
 
     const totalTrades = stats.total_trades || 0;
     const winsCount = stats.wins_count || 0;
@@ -4044,7 +4075,8 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   await loadTranslations();
   setLang(i18n.lang);
   await ensureUser();
-  await renderAssets(); // Wait for initial data to load
+  preloadAll();
+  await renderAssets();
   
   // Initialize notifications button
   const btnNotifications = document.getElementById('btnNotifications');
