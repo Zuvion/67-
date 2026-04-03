@@ -2291,7 +2291,7 @@ async function openPair(pair, displayName = null){
       
       // Find active trade for current pair
       const pairNormalized = pair.replace('-', '').replace('/', '');
-      const tradeForPair = activeTrades.find(t => 
+      const tradesForPair = activeTrades.filter(t => 
         t.pair.replace('-', '').replace('/', '') === pairNormalized && 
         (t.is_active || t.status === 'active')
       );
@@ -2305,51 +2305,44 @@ async function openPair(pair, displayName = null){
       
       if (!btnBuy || !btnSell) return;
       
-      if (tradeForPair) {
-        activeTradeForPair = tradeForPair;
-        const timeLeft = tradeForPair.time_left_sec || 0;
+      activeTradeForPair = tradesForPair.length > 0 ? tradesForPair[0] : null;
+      
+      const buyTrades = tradesForPair.filter(t => t.side === 'buy');
+      const sellTrades = tradesForPair.filter(t => t.side === 'sell');
+      
+      btnBuy.style.opacity = '1';
+      btnSell.style.opacity = '1';
+      btnBuy.style.animation = 'none';
+      btnSell.style.animation = 'none';
+      
+      if (buyTrades.length > 0) {
+        const nearest = buyTrades.reduce((a, b) => (a.time_left_sec || 0) < (b.time_left_sec || 0) ? a : b);
+        const timeLeft = nearest.time_left_sec || 0;
         const mins = Math.floor(timeLeft / 60);
-        const secs = timeLeft % 60;
-        const timerText = `(${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')})`;
-        
-        if (tradeForPair.side === 'buy') {
-          btnBuyText.textContent = t('trade.buy');
-          btnBuyTimer.textContent = timerText;
-          btnBuyTimer.style.display = 'inline';
-          btnBuy.style.background = 'linear-gradient(135deg, #00E676, #0BA069)';
-          btnBuy.style.animation = 'pulse-green 1.5s infinite';
-          
-          btnSellText.textContent = t('trade.sell');
-          btnSellTimer.style.display = 'none';
-          btnSell.style.background = '#FF5252';
-          btnSell.style.animation = 'none';
-          btnSell.style.opacity = '0.5';
-        } else {
-          btnSellText.textContent = t('trade.sell');
-          btnSellTimer.textContent = timerText;
-          btnSellTimer.style.display = 'inline';
-          btnSell.style.background = 'linear-gradient(135deg, #FF5252, #D43850)';
-          btnSell.style.animation = 'pulse-red 1.5s infinite';
-          
-          btnBuyText.textContent = t('trade.buy');
-          btnBuyTimer.style.display = 'none';
-          btnBuy.style.background = '#00E676';
-          btnBuy.style.animation = 'none';
-          btnBuy.style.opacity = '0.5';
-        }
+        const secs = Math.floor(timeLeft % 60);
+        btnBuyText.textContent = t('trade.buy');
+        btnBuyTimer.textContent = `(${buyTrades.length}) ${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+        btnBuyTimer.style.display = 'inline';
+        btnBuy.style.background = 'linear-gradient(135deg, #00E676, #0BA069)';
       } else {
-        activeTradeForPair = null;
         btnBuyText.textContent = t('trade.buy');
         btnBuyTimer.style.display = 'none';
         btnBuy.style.background = '#00E676';
-        btnBuy.style.animation = 'none';
-        btnBuy.style.opacity = '1';
-        
+      }
+      
+      if (sellTrades.length > 0) {
+        const nearest = sellTrades.reduce((a, b) => (a.time_left_sec || 0) < (b.time_left_sec || 0) ? a : b);
+        const timeLeft = nearest.time_left_sec || 0;
+        const mins = Math.floor(timeLeft / 60);
+        const secs = Math.floor(timeLeft % 60);
+        btnSellText.textContent = t('trade.sell');
+        btnSellTimer.textContent = `(${sellTrades.length}) ${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+        btnSellTimer.style.display = 'inline';
+        btnSell.style.background = 'linear-gradient(135deg, #FF5252, #D43850)';
+      } else {
         btnSellText.textContent = t('trade.sell');
         btnSellTimer.style.display = 'none';
         btnSell.style.background = '#FF5252';
-        btnSell.style.animation = 'none';
-        btnSell.style.opacity = '1';
       }
     } catch (e) {
       console.error('Failed to update buttons:', e);
