@@ -1907,33 +1907,68 @@ async function openExchange(){
 // -------- Wallet detail ----------
 async function openWallet(sym){
   const cont=document.getElementById('root');
-  const user = await (await apiFetch('/api/user')).json();
+  const [user, history] = await Promise.all([
+    cachedFetch('user', '/api/user').then(d => d || {balance_usdt:0, wallets:{}}),
+    apiFetch('/api/history?symbol='+encodeURIComponent(sym)).then(r => r.json()).catch(() => [])
+  ]);
   const bal = user.wallets?.[sym] ?? (sym==='USDT'? user.balance_usdt: 0);
+  const logo = (typeof cryptoLogos !== 'undefined' && cryptoLogos[sym]) ? cryptoLogos[sym] : '';
+  
   cont.innerHTML = `
-  <div class="container">
-    <button class="btn" id="backAssets">${'← ' + t('btn.back')}</button>
-    <div class="balance-card" style="margin-top:10px">
-      <div class="small">${sym} ${t('common.balance')}</div>
-      <div class="balance-amount">${fmtNum(bal||0, 6)} <span class="currency">${sym}</span></div>
-      <div class="balance-actions">
-        <button class="btn btn-primary" id="wDep">${t('btn.deposit')}</button>
-        <button class="btn btn-green" id="wEx">${t('btn.exchange')}</button>
+  <div class="container" style="padding:0 0 90px 0">
+    <div style="padding:12px 16px 0">
+      <button class="btn-back-clean" id="backAssets" style="background:none;border:none;color:#7B8CA2;font-size:14px;cursor:pointer;padding:8px 0;display:flex;align-items:center;gap:6px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        ${t('btn.back')}
+      </button>
+    </div>
+    
+    <div style="text-align:center;padding:20px 20px 24px">
+      ${logo ? `<img src="${logo}" alt="${sym}" style="width:56px;height:56px;border-radius:50%;background:#131A2A;padding:4px;border:1px solid rgba(224,64,251,0.2);margin-bottom:12px" onerror="this.style.display='none'">` : ''}
+      <div style="font-size:13px;color:#7B8CA2;margin-bottom:6px">${sym} ${t('common.balance')}</div>
+      <div style="font-size:32px;font-weight:700;color:#fff;font-family:monospace;letter-spacing:-0.5px;word-break:break-all;padding:0 12px">${fmtNum(bal||0, sym==='USDT'?2:6)}<span style="font-size:18px;color:#7B8CA2;margin-left:6px">${sym}</span></div>
+      
+      <div style="display:flex;justify-content:center;gap:32px;margin-top:24px">
+        <div id="wDep" style="text-align:center;cursor:pointer">
+          <div style="width:48px;height:48px;border-radius:50%;background:rgba(224,64,251,0.12);border:1.5px solid rgba(224,64,251,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 6px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E040FB" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </div>
+          <div style="font-size:11px;color:#E040FB;font-weight:500">${t('btn.deposit')}</div>
+        </div>
+        ${sym==='USDT' ? `
+        <div id="wWith" style="text-align:center;cursor:pointer">
+          <div style="width:48px;height:48px;border-radius:50%;background:rgba(124,77,255,0.12);border:1.5px solid rgba(124,77,255,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 6px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C4DFF" stroke-width="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          </div>
+          <div style="font-size:11px;color:#7C4DFF;font-weight:500">${t('btn.withdraw')}</div>
+        </div>` : ''}
+        <div id="wEx" style="text-align:center;cursor:pointer">
+          <div style="width:48px;height:48px;border-radius:50%;background:rgba(0,230,118,0.12);border:1.5px solid rgba(0,230,118,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 6px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00E676" stroke-width="2.5"><path d="M7 16l-4-4 4-4M17 8l4 4-4 4M3 12h18"/></svg>
+          </div>
+          <div style="font-size:11px;color:#00E676;font-weight:500">${t('btn.exchange')}</div>
+        </div>
       </div>
     </div>
-    <div class="section">
-      <div class="section-header" id="whToggle"><div class="section-title">${t('history.title')} (${sym})</div></div>
-      <div class="section-content hidden" id="walletHist"></div>
+    
+    <div style="margin:0 16px;background:#131A2A;border-radius:16px;border:1px solid rgba(255,255,255,0.06);overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <div style="font-size:14px;font-weight:600;color:#fff">${t('history.title')} (${sym})</div>
+      </div>
+      <div id="walletHist" style="padding:8px"></div>
     </div>
   </div>`;
+  
   document.getElementById('backAssets').onclick = renderAssets;
   document.getElementById('wDep').onclick = openDeposit;
   document.getElementById('wEx').onclick = openExchange;
-  document.getElementById('whToggle').onclick = ()=> document.getElementById('walletHist').classList.toggle('hidden');
+  const wWith = document.getElementById('wWith');
+  if (wWith) wWith.onclick = openWithdraw;
   
-  const h = await (await apiFetch('/api/history?symbol='+encodeURIComponent(sym))).json();
-  const wrap = document.getElementById('walletHist'); const ul=document.createElement('div');
-  (h||[]).forEach(x=>{ const row=document.createElement('div'); row.className='small'; row.textContent = `${x.type} • ${x.amount} ${x.currency} • ${new Date(x.created_at).toLocaleString()}`; ul.appendChild(row); });
-  wrap.appendChild(ul);
+  const wrap = document.getElementById('walletHist');
+  window._historyTransactions = history || [];
+  window._historyPage = 1;
+  renderHistoryPage(wrap, history || [], 1);
 }
 
 // -------- Trade ----------
